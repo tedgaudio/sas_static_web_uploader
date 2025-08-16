@@ -56,6 +56,7 @@ class AzureFileUploader {
         const urlParams = new URLSearchParams(window.location.search);
         this.containerName = urlParams.get('container') || 'default-container';
         this.containerLocation = urlParams.get('location') || 'eastus';
+        this.folderPath = urlParams.get('folder') || ''; // 폴더 경로 추가
         
         // 컨테이너 정보 표시
         this.containerNameSpan.textContent = this.containerName;
@@ -156,7 +157,7 @@ class AzureFileUploader {
                 },
                 body: JSON.stringify({
                     containerName: this.containerName,
-                    fileName: this.selectedFile.name,
+                    fileName: this.folderPath ? `${this.folderPath}/${this.selectedFile.name}` : this.selectedFile.name,
                     location: this.containerLocation
                 })
             });
