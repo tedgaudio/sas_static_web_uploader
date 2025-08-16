@@ -1,0 +1,25 @@
+{
+  "name": "azure-uploader-web-service",
+  "version": "1.0.0",
+  "description": "Azure Blob Storage uploader for Streamlit iframe integration",
+  "main": "index.html",
+  "scripts": {
+    "dev": "live-server .",
+    "build": "echo 'Static site - no build needed'"
+  },
+  "dependencies": {
+    "@azure/storage-blob": "^12.15.0"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "keywords": [
+    "azure",
+    "blob-storage",
+    "file-upload",
+    "streamlit",
+    "iframe"
+  ],
+  "author": "",
+  "license": "MIT"
+}

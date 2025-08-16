@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure File Uploader</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-area {
+            border: 3px dashed #e1e5f0;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background-color: #f0f3ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area.file-selected .upload-text,
+        .upload-area.file-selected .upload-subtext {
+            display: none;
+        }
+
+        .upload-area.file-selected {
+            padding: 20px;
+            border: 2px solid #28a745;
+            background-color: #f8fff9;
+        }
+
+        .upload-area.file-selected .upload-icon {
+            color: #28a745;
+            font-size: 32px;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtext {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .selected-file {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-icon {
+            font-size: 24px;
+            color: #667eea;
+        }
+
+        .file-details h3 {
+            font-size: 16px;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .file-details p {
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        .upload-stats {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 13px;
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status-message {
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status-success {
+            background: #f0fff4;
+            color: #38a169;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status-error {
+            background: #fed7d7;
+            color: #e53e3e;
+            border: 1px solid #feb2b2;
+        }
+
+        .status-info {
+            background: #ebf8ff;
+            color: #3182ce;
+            border: 1px solid #90cdf4;
+        }
+
+        .container-info {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        .container-info strong {
+            color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Azure File Uploader</h1>
+            <p>Streamlit을 위한 대용량 파일 업로드 서비스</p>
+        </div>
+        
+        <div class="content">
+            <div class="container-info" id="containerInfo" style="display: none;">
+                <strong>업로드 대상:</strong> <span id="containerName"></span><br>
+                <strong>위치:</strong> <span id="containerLocation"></span>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">파일을 드래그하거나 클릭하여 선택하세요</div>
+                <div class="upload-subtext">모든 파일 형식 지원 • 최대 크기 제한 없음</div>
+                <input type="file" id="fileInput" class="file-input" multiple>
+            </div>
+
+            <div class="selected-file" id="selectedFile">
+                <div class="file-info">
+                    <div class="file-icon">📄</div>
+                    <div class="file-details">
+                        <h3 id="fileName"></h3>
+                        <p id="fileSize"></p>
+                    </div>
+                </div>
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progressText">업로드 중...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="upload-stats" style="display: none;" id="uploadStats">
+                        <div class="stat-item">
+                            <span id="uploadSpeed">속도: 계산 중...</span>
+                        </div>
+                        <div class="stat-item">
+                            <span id="uploadETA">남은 시간: 계산 중...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="upload-btn" id="uploadBtn">업로드 시작</button>
+
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <!-- 자체 Azure Storage 업로드 구현 -->
+    <script>
+        // 동시 업로드 제어를 위한 Semaphore 클래스
+        class Semaphore {
+            constructor(permits) {
+                this.permits = permits;
+                this.waitQueue = [];
+            }
+            
+            async acquire() {
+                return new Promise((resolve) => {
+                    if (this.permits > 0) {
+                        this.permits--;
+                        resolve();
+                    } else {
+                        this.waitQueue.push(resolve);
+                    }
+                });
+            }
+            
+            release() {
+                this.permits++;
+                if (this.waitQueue.length > 0) {
+                    this.permits--;
+                    const resolve = this.waitQueue.shift();
+                    resolve();
+                }
+            }
+        }
+        
+        // 간단한 Azure Blob Storage 업로드 구현
+        window.Azure = {
+            Storage: {
+                Blob: {
+                    BlockBlobClient: class {
+                        constructor(url) {
+                            this.url = url;
+                        }
+                        
+                        async uploadData(file, options = {}) {
+                            const { onProgress, blockSize = 4 * 1024 * 1024, concurrency = 5 } = options;
+                            
+                            console.log(`📊 파일 업로드 시작: ${this._formatSize(file.size)}, 블록 크기: ${this._formatSize(blockSize)}, 동시성: ${concurrency}`);
+                            
+                            // 소용량 파일 (100MB 미만)은 단일 업로드
+                            if (file.size < 100 * 1024 * 1024) {
+                                console.log('🚀 단일 업로드 모드');
+                                return this._uploadSingle(file, onProgress);
+                            }
+                            
+                            // 대용량 파일은 청크 업로드 (20GB+ 최적화)
+                            console.log('🔄 청크 업로드 모드');
+                            return this._uploadChunked(file, { blockSize, concurrency, onProgress });
+                        }
+                        
+                        async _uploadSingle(file, onProgress) {
+                            return new Promise((resolve, reject) => {
+                                const xhr = new XMLHttpRequest();
+                                
+                                xhr.upload.addEventListener('progress', (e) => {
+                                    if (e.lengthComputable && onProgress) {
+                                        onProgress({
+                                            loadedBytes: e.loaded,
+                                            totalBytes: e.total
+                                        });
+                                    }
+                                });
+                                
+                                xhr.addEventListener('load', () => {
+                                    if (xhr.status >= 200 && xhr.status < 300) {
+                                        resolve({ _response: { status: xhr.status } });
+                                    } else {
+                                        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                                    }
+                                });
+                                
+                                xhr.addEventListener('error', () => {
+                                    reject(new Error('Network error occurred'));
+                                });
+                                
+                                xhr.open('PUT', this.url);
+                                xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob');
+                                xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                                xhr.send(file);
+                            });
+                        }
+                        
+                        async _uploadChunked(file, { blockSize, concurrency, onProgress }) {
+                            const totalBlocks = Math.ceil(file.size / blockSize);
+                            const blockIds = [];
+                            let uploadedBytes = 0;
+                            let completedBlocks = 0;
+                            
+                            console.log(`📦 초대용량 파일 청크 업로드: ${totalBlocks}개 블록, 블록 크기: ${this._formatSize(blockSize)}, 동시성: ${concurrency}`);
+                            console.log(`🔢 예상 업로드 시간: ${this._estimateUploadTime(file.size, blockSize, concurrency)}`);
+                            
+                            // 블록 ID 생성
+                            for (let i = 0; i < totalBlocks; i++) {
+                                blockIds.push(this._generateBlockId(i));
+                            }
+                            
+                            // 청크별 업로드 함수
+                            const uploadBlock = async (blockIndex) => {
+                                const start = blockIndex * blockSize;
+                                const end = Math.min(start + blockSize, file.size);
+                                const chunk = file.slice(start, end);
+                                
+                                const blockUrl = `${this.url}&comp=block&blockid=${encodeURIComponent(blockIds[blockIndex])}`;
+                                
+                                return new Promise((resolve, reject) => {
+                                    const xhr = new XMLHttpRequest();
+                                    
+                                    xhr.addEventListener('load', () => {
+                                        if (xhr.status >= 200 && xhr.status < 300) {
+                                            uploadedBytes += chunk.size;
+                                            completedBlocks++;
+                                            
+                                            // 진행률 업데이트 (초대용량 파일용 최적화)
+                                            if (onProgress && (completedBlocks % Math.max(1, Math.floor(totalBlocks / 100)) === 0 || completedBlocks === totalBlocks)) {
+                                                onProgress({
+                                                    loadedBytes: uploadedBytes,
+                                                    totalBytes: file.size,
+                                                    completedBlocks: completedBlocks,
+                                                    totalBlocks: totalBlocks
+                                                });
+                                            }
+                                            
+                                            console.log(`✅ 블록 ${blockIndex + 1}/${totalBlocks} 완료 (${Math.round(completedBlocks / totalBlocks * 100)}%)`);
+                                            resolve();
+                                        } else {
+                                            reject(new Error(`블록 ${blockIndex} 업로드 실패: HTTP ${xhr.status}`));
+                                        }
+                                    });
+                                    
+                                    xhr.addEventListener('error', () => {
+                                        reject(new Error(`블록 ${blockIndex} 네트워크 오류`));
+                                    });
+                                    
+                                    xhr.open('PUT', blockUrl);
+                                    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+                                    xhr.send(chunk);
+                                });
+                            };
+                            
+                            // 동시 업로드 실행
+                            const semaphore = new Semaphore(concurrency);
+                            const uploadPromises = blockIds.map(async (_, blockIndex) => {
+                                await semaphore.acquire();
+                                try {
+                                    await uploadBlock(blockIndex);
+                                } finally {
+                                    semaphore.release();
+                                }
+                            });
+                            
+                            await Promise.all(uploadPromises);
+                            
+                            // 블록 리스트 커밋
+                            return this._commitBlockList(blockIds);
+                        }
+                        
+                        async _commitBlockList(blockIds) {
+                            const commitUrl = `${this.url}&comp=blocklist`;
+                            const blockListXml = this._createBlockListXml(blockIds);
+                            
+                            return new Promise((resolve, reject) => {
+                                const xhr = new XMLHttpRequest();
+                                
+                                xhr.addEventListener('load', () => {
+                                    if (xhr.status >= 200 && xhr.status < 300) {
+                                        console.log('✅ 블록 리스트 커밋 완료');
+                                        resolve({ _response: { status: xhr.status } });
+                                    } else {
+                                        reject(new Error(`블록 리스트 커밋 실패: HTTP ${xhr.status}`));
+                                    }
+                                });
+                                
+                                xhr.addEventListener('error', () => {
+                                    reject(new Error('블록 리스트 커밋 네트워크 오류'));
+                                });
+                                
+                                xhr.open('PUT', commitUrl);
+                                xhr.setRequestHeader('Content-Type', 'application/xml');
+                                xhr.send(blockListXml);
+                            });
+                        }
+                        
+                        _generateBlockId(blockIndex) {
+                            return btoa(String(blockIndex).padStart(6, '0'));
+                        }
+                        
+                        _createBlockListXml(blockIds) {
+                            const blocks = blockIds.map(id => `<Latest>${id}</Latest>`).join('');
+                            return `<?xml version="1.0" encoding="utf-8"?><BlockList>${blocks}</BlockList>`;
+                        }
+                        
+                        _formatSize(bytes) {
+                            if (bytes === 0) return '0 Bytes';
+                            const k = 1024;
+                            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+                            const i = Math.floor(Math.log(bytes) / Math.log(k));
+                            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+                        }
+                        
+                        // 업로드 시간 예측 (20GB+ 파일용)
+                        _estimateUploadTime(fileSize, blockSize, concurrency) {
+                            // 평균 업로드 속도 추정 (보수적으로 10Mbps)
+                            const avgSpeedMbps = 10;
+                            const avgSpeedBps = (avgSpeedMbps * 1024 * 1024) / 8;
+                            
+                            // 동시성을 고려한 효율적인 속도 (100% 효율은 불가능)
+                            const efficiency = Math.min(0.8, concurrency * 0.15);
+                            const effectiveSpeed = avgSpeedBps * efficiency;
+                            
+                            const estimatedSeconds = fileSize / effectiveSpeed;
+                            
+                            if (estimatedSeconds < 60) {
+                                return `약 ${Math.round(estimatedSeconds)}초`;
+                            } else if (estimatedSeconds < 3600) {
+                                return `약 ${Math.round(estimatedSeconds / 60)}분`;
+                            } else {
+                                const hours = Math.floor(estimatedSeconds / 3600);
+                                const minutes = Math.round((estimatedSeconds % 3600) / 60);
+                                return `약 ${hours}시간 ${minutes}분`;
+                            }
+                        }
+                        
+                        // 메모리 사용량 최적화를 위한 가비지 컬렉션 힌트
+                        _optimizeMemory() {
+                            if (window.gc && typeof window.gc === 'function') {
+                                window.gc();
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        console.log('✅ 자체 Azure Storage 업로드 구현 로드 완료');
+    </script>
+    <script src="js/uploader.js"></script>
+</body>
+</html>
